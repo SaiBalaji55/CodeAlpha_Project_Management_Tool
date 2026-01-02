@@ -37,7 +37,7 @@ ProjectFlow is a full-stack Project Management Web Application built to manage p
 ---
 
 ##  Project Structure
-
+```
 projectflow/
 
 │
@@ -65,7 +65,7 @@ projectflow/
 │
 
 └── README.md
-
+```
 
 ---
 
