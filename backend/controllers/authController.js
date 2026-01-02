@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// ✅ REGISTER
+// REGISTER
 exports.register = async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -15,7 +15,7 @@ exports.register = async (req, res) => {
             return res.status(400).json({ error: 'User already exists' });
         }
 
-        // ❌ DO NOT HASH HERE
+        //  DO NOT HASH HERE
         const user = await User.create({
             name,
             email,
@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
     }
 };
 
-// ✅ LOGIN
+// LOGIN
 exports.login = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -69,3 +69,4 @@ exports.login = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
