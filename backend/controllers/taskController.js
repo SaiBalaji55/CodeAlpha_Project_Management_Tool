@@ -5,14 +5,14 @@ exports.createTask = async (req, res) => {
     try {
         const { title, project, status } = req.body;
 
-        // 🔴 Validate input
+        //  Validate input
         if (!title || !project) {
             return res.status(400).json({
                 error: 'Title and project are required'
             });
         }
 
-        // 🔍 Check project exists
+        //  Check project exists
         const existingProject = await Project.findById(project);
         if (!existingProject) {
             return res.status(404).json({
@@ -100,4 +100,5 @@ exports.deleteTask = async (req, res) => {
     } catch (error) {
         res.status(400).json({ error: error.message });
     }
+
 };
