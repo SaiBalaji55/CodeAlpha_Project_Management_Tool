@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     }
 });
 
-// 🔐 Hash password before saving (ONLY ONCE)
+//  Hash password before saving (ONLY ONCE)
 userSchema.pre('save', async function () {
     if (!this.isModified('password')) return;
 
@@ -32,9 +32,10 @@ userSchema.pre('save', async function () {
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// 🔍 Compare password during login
+//  Compare password during login
 userSchema.methods.comparePassword = async function (candidatePassword) {
     return await bcrypt.compare(candidatePassword, this.password);
 };
 
 module.exports = mongoose.model('User', userSchema);
+
