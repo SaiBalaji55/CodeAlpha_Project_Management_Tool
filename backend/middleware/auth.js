@@ -22,7 +22,7 @@ module.exports = async (req, res, next) => {
             return res.status(401).json({ error: 'User not found' });
         }
 
-        // ✅ THIS IS CRITICAL
+   
         req.user = user;
         req.token = token;
 
@@ -32,3 +32,4 @@ module.exports = async (req, res, next) => {
         res.status(401).json({ error: 'Please authenticate.' });
     }
 };
+
