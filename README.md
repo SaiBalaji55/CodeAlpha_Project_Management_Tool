@@ -97,3 +97,37 @@ Open frontend/index.html in browser
 (or use VS Code Live Server)
 
 
+### Authentication Flow
+
+User logs in / registers
+
+Backend returns JWT token
+
+Token stored in localStorage
+
+Token sent in request headers:
+
+```
+Authorization: Bearer <token>
+```
+ 
+ ## API Endpoints
+
+### Authentication
+
+POST /api/auth/register – Register user
+
+POST /api/auth/login – Login user
+
+### Projects
+
+GET /api/projects – Get all projects
+
+POST /api/projects – Create project
+
+### Tasks
+
+GET /api/tasks/:projectId – Get tasks
+
+POST /api/tasks – Create task
+
