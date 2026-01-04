@@ -3038,11 +3038,21 @@
 
         // ===== PAGE MANAGEMENT =====
         function showPage(pageId) {
-            // Hide all pages
-            if (pageId !== 'authPage' && !currentUser) {
-                showPage('authPage');
-                return;
+            console.log('showPage called with:', pageId);
+            
+            // Check authentication for protected pages
+            if (pageId !== 'authPage') {
+                const userData = localStorage.getItem('user');
+                const token = localStorage.getItem('token');
+                const userId = localStorage.getItem('userId');
+                
+                if (!userData || !token || !userId) {
+                    console.log('No valid session, redirecting to auth');
+                    pageId = 'authPage';
+                }
             }
+            
+            // Hide all pages
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
             });
@@ -3051,26 +3061,32 @@
             const page = document.getElementById(pageId);
             if (page) {
                 page.classList.add('active');
+                console.log('Now showing page:', pageId);
             }
             
             // Update navigation
             updateNavigation(pageId);
             
             // Initialize specific page features
-            if (pageId === 'dashboardPage') {
-                updateDashboard();
+            if (pageId === 'dashboardPage' && currentUser) {
+                console.log('Initializing dashboard...');
+                updateUserInfo();
+                setTimeout(() => {
+                    initData();
+                    updateDashboard();
+                }, 100);
             } else if (pageId === 'tasksPage') {
                 renderTaskBoard();
             } else if (pageId === 'calendarPage') {
-                initCalendar();
+                setTimeout(initCalendar, 100);
             } else if (pageId === 'projectsPage') {
-                renderAllProjects();
+                setTimeout(renderAllProjects, 100);
             } else if (pageId === 'teamPage') {
-                renderTeamMembers();
+                setTimeout(renderTeamMembers, 100);
             } else if (pageId === 'analyticsPage') {
-                initAnalytics();
+                setTimeout(initAnalytics, 100);
             } else if (pageId === 'settingsPage') {
-                initSettings();
+                setTimeout(initSettings, 100);
             }
         }
 
@@ -3123,54 +3139,100 @@
 
         // ===== AUTHENTICATION =====
         function initAuth() {
-            // Check if user is logged in
+            console.log('initAuth called');
+            
+            // Check if user is logged in IMMEDIATELY
             const userData = localStorage.getItem('user');
             const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
             
-            if (userData && token) {
+            console.log('Auth check:', { userData: !!userData, token: !!token, userId: !!userId });
+            
+            if (userData && token && userId) {
                 try {
                     currentUser = JSON.parse(userData);
+                    console.log('User found, showing dashboard');
                     showPage('dashboardPage');
                     updateUserInfo();
-                    initData();
+                    // Don't initData here, let showPage handle it
                 } catch (error) {
                     console.error('Error parsing user data:', error);
                     showPage('authPage');
                 }
             } else {
+                console.log('No user found, showing auth page');
                 showPage('authPage');
             }
 
             // Form toggle
-            document.getElementById('showRegister').addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleAuthForms('register');
-            });
+            const showRegister = document.getElementById('showRegister');
+            const showLogin = document.getElementById('showLogin');
+            
+            if (showRegister) {
+                showRegister.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleAuthForms('register');
+                });
+            }
 
-            document.getElementById('showLogin').addEventListener('click', function(e) {
-                e.preventDefault();
-                toggleAuthForms('login');
-            });
+            if (showLogin) {
+                showLogin.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    toggleAuthForms('login');
+                });
+            }
 
             // Login form submission
-            document.getElementById('loginForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                handleLogin();
-            });
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleLogin();
+                });
+            }
 
             // Register form submission
-            document.getElementById('registerForm').addEventListener('submit', function(e) {
-                e.preventDefault();
-                handleRegister();
-            });
+            const registerForm = document.getElementById('registerForm');
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    handleRegister();
+                });
+            }
 
-            // Logout - ADD EVENT LISTENER PROPERLY
+            // Logout
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', handleLogout);
             }
         }
 
+        // Add this at the end of your script temporarily
+        function debugLocalStorage() {
+            console.log('=== LOCALSTORAGE DEBUG ===');
+            console.log('token:', localStorage.getItem('token'));
+            console.log('userId:', localStorage.getItem('userId'));
+            console.log('user:', localStorage.getItem('user'));
+            
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+                const userProjectsKey = `projects_${userId}`;
+                console.log(`Projects key: ${userProjectsKey}`);
+                console.log('Projects data:', localStorage.getItem(userProjectsKey));
+            }
+            
+            // List all localStorage keys
+            console.log('All localStorage keys:');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                console.log(`  ${key}`);
+            }
+        }
+
+        // Call it after login
+        // Add to handleLogin after successful login:
+        console.log('Login successful, calling debugLocalStorage');
+        debugLocalStorage();
         function toggleAuthForms(formType) {
             if (formType === 'register') {
                 document.getElementById('loginForm').style.display = 'none';
@@ -3194,7 +3256,6 @@
         }
 
         function handleLogin() {
-            alert("Login clicked");
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
 
@@ -3214,15 +3275,27 @@
 
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // CRITICAL: Store the user ID properly
+                if (data.user && data.user._id) {
+                    localStorage.setItem('userId', data.user._id);
+                } else if (data.user && data.user.id) {
+                    localStorage.setItem('userId', data.user.id);
+                } else {
+                    console.error('User ID not found in response:', data);
+                    showToast('Login failed: User data incomplete', 'error');
+                    return;
+                }
 
                 currentUser = data.user;
 
                 showToast('Login successful!', 'success');
                 showPage('dashboardPage');
                 updateUserInfo();
-                generateMockData();
+                generateMockData(); // This should now work with proper userId
             })
-            .catch(() => {
+            .catch((error) => {
+                console.error('Login error:', error);
                 showToast('Server error', 'error');
             });
         }
@@ -3238,7 +3311,6 @@
                 return;
             }
 
-            // ✅ CALL REGISTER API
             fetch('http://localhost:3000/api/auth/register', {
                 method: "POST",
                 headers: {
@@ -3257,14 +3329,14 @@
                     return;
                 }
 
-                
+                // Store user ID from registration response too
+                if (data.user && (data.user._id || data.user.id)) {
+                    localStorage.setItem('userId', data.user._id || data.user.id);
+                }
 
                 showToast('Registration successful! Please login.', 'success');
-
-                // switch to login form
                 toggleAuthForms('login');
-
-                // clear form
+                
                 document.getElementById('regName').value = '';
                 document.getElementById('regEmail').value = '';
                 document.getElementById('regPassword').value = '';
@@ -3277,10 +3349,18 @@
 
        function handleLogout() {
             // Clear all user data
+            const userId = localStorage.getItem('userId');
+            
             localStorage.removeItem('user');
             localStorage.removeItem('token');
-            localStorage.removeItem('projects');
-            localStorage.removeItem('tasks');
+            localStorage.removeItem('userId');
+            
+            // Clear user-specific project data
+            if (userId) {
+                localStorage.removeItem(`projects_${userId}`);
+            }
+            
+            // Clear other user-specific data
             localStorage.removeItem('notificationSettings');
             localStorage.removeItem('privacySettings');
             localStorage.removeItem('theme');
@@ -3360,29 +3440,56 @@
                 return;
             }
 
+            // Get userId from localStorage
+            const userId = localStorage.getItem('userId');
+            if (!userId) {
+                console.error('No userId found in localStorage');
+                showToast('User session error. Please login again.', 'error');
+                return;
+            }
 
-             // First try to load projects from localStorage
-            const savedProjects = localStorage.getItem('projects');
+            // Create user-specific localStorage key
+            const userProjectsKey = `projects_${userId}`;
+            console.log('Loading projects with key:', userProjectsKey); // Debug
+            
+            // First try to load projects from localStorage for THIS user
+            const savedProjects = localStorage.getItem(userProjectsKey);
             if (savedProjects) {
+                console.log('Found cached projects:', JSON.parse(savedProjects).length); // Debug
                 projects = JSON.parse(savedProjects);
                 updateDashboard();
                 renderAllProjects();
-                return; // Skip API call if we have cached projects
+                
+                // Still fetch fresh data but don't wait for it
+                fetchFreshProjects(token, userId);
+                return;
             }
 
-            /* =========================
-            FETCH PROJECTS (REAL)
-            ========================= */
+            // No cached projects, fetch from API
+            fetchFreshProjects(token, userId);
+            
+            // Generate mock data for other sections (activities, notifications, team)
+            generateOtherMockData();
+        }
+
+        // New function to fetch projects from API
+        function fetchFreshProjects(token, userId) {
+            console.log('Fetching fresh projects for user:', userId); // Debug
+            
             fetch('http://localhost:3000/api/projects', {
                 headers: {
                     "Authorization": "Bearer " + token
                 }
             })
             .then(res => {
-                if (!res.ok) throw new Error('Failed to fetch projects');
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch projects: ${res.status}`);
+                }
                 return res.json();
             })
             .then(data => {
+                console.log('API response data:', data); // Debug
+                
                 // Convert backend projects to frontend format
                 projects = data.map(project => ({
                     id: project._id,
@@ -3397,23 +3504,34 @@
                         : 30
                 }));
                 
-
-                localStorage.setItem('projects', JSON.stringify(projects));
+                console.log('Processed projects:', projects); // Debug
+                
+                // Store projects with user-specific key
+                const userProjectsKey = `projects_${userId}`;
+                localStorage.setItem(userProjectsKey, JSON.stringify(projects));
+                
+                console.log('Projects stored with key:', userProjectsKey); // Debug
 
                 updateDashboard();
                 renderAllProjects();
             })
-            .catch(() => {
-                showToast('Failed to load projects', 'error');
-                const savedProjects = localStorage.getItem('projects');
+            .catch((error) => {
+                console.error('Error fetching projects:', error);
+                showToast('Failed to load projects from server', 'error');
+                
+                // Try to load from cache as fallback
+                const userProjectsKey = `projects_${userId}`;
+                const savedProjects = localStorage.getItem(userProjectsKey);
                 if (savedProjects) {
                     projects = JSON.parse(savedProjects);
                     updateDashboard();
                     renderAllProjects();
                 }
             });
-            
+        }
 
+        // Separate function for other mock data
+        function generateOtherMockData() {
             /* =========================
             ACTIVITIES (UI MOCK – OK)
             ========================= */
@@ -3424,7 +3542,7 @@
                 const type = activityTypes[Math.floor(Math.random() * activityTypes.length)];
                 const subject = activitySubjects[Math.floor(Math.random() * activitySubjects.length)];
                 const task = tasks[Math.floor(Math.random() * tasks.length)];
-                const user = ['John Doe', 'Sarah Smith', 'Mike Johnson', 'Alex Chen'][Math.floor(Math.random() * 4)];
+                const user = currentUser ? currentUser.name : 'You';
                 const timeAgo = `${Math.floor(Math.random() * 24) + 1} hours ago`;
 
                 return {
@@ -3490,8 +3608,11 @@
                     performance: 95
                 });
             }
+            
+            // Update UI
+            updateActivityTimeline();
+            loadNotifications();
         }
-
 
         function getActivityIcon(type) {
             const icons = {
@@ -3611,7 +3732,9 @@
             const container = document.getElementById('allProjectsGrid');
             if (!container) return;
             
-            if (projects.length === 0) {
+            console.log('Rendering projects:', projects); // Debug
+            
+            if (!projects || projects.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
                         <div class="empty-state-icon">
@@ -4442,10 +4565,12 @@
         // ===== PROJECT SYNC FUNCTIONS =====
         async function syncProjectsWithBackend() {
             const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
+            
             if (!token) return;
             
             try {
-                const response = await fetch('http://localhost:3000/api/projects', {
+                const response = await fetch(`http://localhost:3000/api/projects?userId=${userId}`, {
                     headers: {
                         "Authorization": "Bearer " + token
                     }
@@ -4467,9 +4592,12 @@
                         : 30
                 }));
                 
-                // Merge local and backend projects, preferring backend data
+                // Merge local and backend projects
                 projects = [...backendProjects];
-                localStorage.setItem('projects', JSON.stringify(projects));
+                
+                // Store in user-specific localStorage key
+                const userProjectsKey = `projects_${userId}`;
+                localStorage.setItem(userProjectsKey, JSON.stringify(projects));
                 
                 updateDashboard();
                 renderAllProjects();
@@ -5273,7 +5401,29 @@
 
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize authentication
+            console.log('DOM fully loaded and parsed');
+            
+            // First, check if user is logged in
+            const userData = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
+            
+            if (userData && token && userId) {
+                try {
+                    currentUser = JSON.parse(userData);
+                    console.log('User authenticated, showing dashboard');
+                    // Show dashboard immediately
+                    showPage('dashboardPage');
+                } catch (error) {
+                    console.error('Error parsing user data:', error);
+                    showPage('authPage');
+                }
+            } else {
+                console.log('No user session found, showing auth page');
+                showPage('authPage');
+            }
+            
+            // Initialize authentication systems
             initAuth();
             
             // Close modal when clicking outside
@@ -5285,15 +5435,45 @@
                 });
             });
             
+            // Close notifications when clicking outside
+            document.addEventListener('click', function(e) {
+                const panel = document.getElementById('notificationsPanel');
+                const btn = document.getElementById('notificationsBtn');
+                
+                if (panel && panel.classList.contains('active') && 
+                    btn && !panel.contains(e.target) && 
+                    !btn.contains(e.target)) {
+                    panel.classList.remove('active');
+                }
+            });
+            
+            // Responsive sidebar
+            window.addEventListener('resize', handleResize);
+            
+            // Add logout event listeners
+            document.querySelectorAll('[id*="logoutBtn"]').forEach(btn => {
+                btn.addEventListener('click', handleLogout);
+            });
 
+            // Trigger initial resize check
+            handleResize();
+            
+            // Prevent accidental form submission refreshes
+            document.addEventListener('submit', function(e) {
+                if (e.target.tagName === 'FORM' && !e.defaultPrevented) {
+                    e.preventDefault();
+                }
+            }, true);
+
+            // Fetch projects function - keep your existing implementation
             async function fetchProjects() {
                 try {
-                    const response = await fetch('http://localhost:3000/api/projects'); // Your API URL
+                    const response = await fetch('http://localhost:3000/api/projects');
                     const projects = await response.json();
                     const projectsGrid = document.querySelector('.projects-grid');
                     
                     if (projectsGrid && projects.length > 0) {
-                        projectsGrid.innerHTML = ''; // Clear the hardcoded "Project Alpha" etc.
+                        projectsGrid.innerHTML = '';
                         projects.forEach(project => {
                             projectsGrid.innerHTML += `
                                 <div class="project-card">
@@ -5313,37 +5493,42 @@
                     console.error("Failed to load projects:", err);
                 }
             }
+        });
 
-            // Close notifications when clicking outside
-            document.addEventListener('click', function(e) {
-                const panel = document.getElementById('notificationsPanel');
-                const btn = document.getElementById('notificationsBtn');
-                
-                if (panel.classList.contains('active') && 
-                    !panel.contains(e.target) && 
-                    !btn.contains(e.target)) {
-                    panel.classList.remove('active');
-                }
-            });
+        // Separate resize handler function
+        function handleResize() {
+            const menuToggle = document.querySelector('.menu-toggle');
+            const sidebar = document.querySelector('.sidebar');
             
-            // Responsive sidebar
-            window.addEventListener('resize', function() {
-                const menuToggle = document.querySelector('.menu-toggle');
-                if (window.innerWidth <= 768) {
-                    menuToggle.style.display = 'block';
-                } else {
-                    menuToggle.style.display = 'none';
-                    document.querySelector('.sidebar').classList.remove('active');
-                }
-            });
+            if (window.innerWidth <= 768) {
+                if (menuToggle) menuToggle.style.display = 'block';
+            } else {
+                if (menuToggle) menuToggle.style.display = 'none';
+                if (sidebar) sidebar.classList.remove('active');
+            }
+        }
+
+        // Also check on window load as backup
+        window.addEventListener('load', function() {
+            console.log('Window fully loaded');
             
-            document.querySelectorAll('[id*="logoutBtn"]').forEach(btn => {
-                btn.addEventListener('click', handleLogout);
-            });
-
-
-            // Trigger initial resize check
-            window.dispatchEvent(new Event('resize'));
+            // Double-check user session
+            const userData = localStorage.getItem('user');
+            const token = localStorage.getItem('token');
+            const userId = localStorage.getItem('userId');
+            
+            if (userData && token && userId) {
+                // If we're on auth page but user is logged in, redirect to dashboard
+                const authPage = document.getElementById('authPage');
+                if (authPage && authPage.classList.contains('active')) {
+                    try {
+                        currentUser = JSON.parse(userData);
+                        showPage('dashboardPage');
+                    } catch (error) {
+                        console.error('Error parsing user data on load:', error);
+                    }
+                }
+            }
         });
 
         // Make functions globally available
