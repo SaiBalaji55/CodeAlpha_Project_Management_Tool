@@ -24,7 +24,7 @@ ProjectFlow is a full-stack Project Management Web Application built to manage p
 ### Frontend
 - HTML5  
 - CSS3  
-- JavaScript (Vanilla JS)  
+- JavaScript
 - Fetch API  
 
 ### Backend
@@ -73,7 +73,7 @@ projectflow/
 
 ### 1️ Clone Repository
 ```bash
-git clone https://github.com/your-username/projectflow.git
+git clone https://github.com/SaiBalaji55/CodeAlpha_Project_Management_Tool
 cd projectflow
 ```
 
